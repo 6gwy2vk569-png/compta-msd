@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Compta MSD" />
+  <title>Compta MSD</title>
+  <style>
+    :root{
+      --bg:#f6f8fc; --panel:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+      --blue:#2563eb; --blue2:#dbeafe; --green:#16a34a; --green2:#dcfce7; --orange:#ea580c;
+      --orange2:#ffedd5; --purple:#7c3aed; --purple2:#ede9fe; --red:#dc2626; --red2:#fee2e2;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:900px;margin:0 auto;padding:18px 14px 110px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .brand h1{font-size:24px;line-height:1;margin:0 0 5px}
+    .brand p{font-size:13px;color:var(--muted);margin:0}
+    .month-select{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;color:var(--text)}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:15px;box-shadow:var(--shadow)}
+    .metric .label{font-size:12px;color:var(--muted);margin-bottom:5px}
+    .metric .value{font-size:21px;font-weight:800;letter-spacing:-.4px}
+    .metric.blue{background:linear-gradient(145deg,#fff,#eff6ff)}
+    .metric.green{background:linear-gradient(145deg,#fff,#f0fdf4)}
+    .metric.orange{background:linear-gradient(145deg,#fff,#fff7ed)}
+    .metric.purple{background:linear-gradient(145deg,#fff,#f5f3ff)}
+    .section{margin-top:13px}
+    .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+    .section-title h2{font-size:17px;margin:0}
+    .section-title small{color:var(--muted)}
+    .urssaf-row,.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+    .urssaf-row:last-child,.row:last-child{border-bottom:0}
+    .urssaf-total{font-size:18px;font-weight:800}
+    .chart-wrap{height:210px;display:flex;align-items:flex-end;gap:8px;padding-top:20px}
+    .barcol{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+    .bar{width:72%;min-height:4px;border-radius:10px 10px 3px 3px;background:linear-gradient(180deg,var(--blue),#60a5fa);transition:.2s}
+    .barlabel{font-size:11px;color:var(--muted)}
+    .barvalue{font-size:10px;color:var(--muted);white-space:nowrap}
+    .empty{color:var(--muted);text-align:center;padding:24px 8px}
+    .entries{display:flex;flex-direction:column;gap:9px}
+    .entry{background:var(--panel);border:1px solid var(--border);border-radius:17px;padding:13px}
+    .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+    .entry-name{font-weight:700;margin-bottom:4px}
+    .entry-meta{font-size:12px;color:var(--muted)}
+    .entry-total{font-weight:800;white-space:nowrap}
+    .entry-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    .pill{font-size:11px;padding:6px 8px;border-radius:999px;background:var(--green2);color:#166534;font-weight:700}
+    .actions{display:flex;gap:6px}
+    .iconbtn{border:0;background:#f1f5f9;border-radius:10px;min-width:38px;min-height:38px;padding:7px}
+    .iconbtn.danger{background:var(--red2);color:var(--red)}
+    .fab{position:fixed;right:18px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:20;border:0;border-radius:18px;background:var(--blue);color:white;font-weight:800;padding:15px 18px;box-shadow:0 12px 28px rgba(37,99,235,.35)}
+    .overlay{position:fixed;inset:0;z-index:50;background:rgba(15,23,42,.48);display:none;align-items:flex-end;justify-content:center}
+    .overlay.open{display:flex}
+    .sheet{width:100%;max-width:700px;background:var(--panel);border-radius:24px 24px 0 0;padding:18px 16px calc(22px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+    .sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .sheet-head h3{margin:0;font-size:20px}
+    .close{border:0;background:#f1f5f9;width:42px;height:42px;border-radius:12px;font-size:22px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .field{margin-bottom:11px}
+    .field.full{grid-column:1/-1}
+    label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+    input,select{width:100%;min-height:48px;border:1px solid var(--border);border-radius:13px;background:#fff;color:var(--text);padding:11px 12px;font-size:16px}
+    input:focus,select:focus{outline:2px solid #bfdbfe;border-color:var(--blue)}
+    .calcbox{grid-column:1/-1;background:#f8fafc;border:1px solid var(--border);border-radius:15px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .calcbox small{display:block;color:var(--muted);margin-bottom:4px}
+    .calcbox strong{font-size:18px}
+    .save{width:100%;border:0;border-radius:14px;background:var(--blue);color:#fff;padding:14px;font-weight:800;margin-top:5px}
+    .tools{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .toolbtn{border:1px solid var(--border);background:var(--panel);border-radius:13px;padding:12px;font-weight:700}
+    .sync-state{font-size:12px;color:var(--muted);margin-top:9px;text-align:center}
+    .badge-online{color:var(--green);font-weight:700}
+    .badge-local{color:var(--orange);font-weight:700}
+    .hint{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
+    @media (min-width:720px){.cards{grid-template-columns:repeat(4,1fr)}.fab{right:max(24px,calc((100vw - 900px)/2 + 24px))}.sheet{border-radius:24px;margin-bottom:20px}}
+    @media (max-width:380px){.app{padding-left:10px;padding-right:10px}.metric .value{font-size:18px}.form-grid{grid-template-columns:1fr}.calcbox{grid-column:auto}.field.full{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="top">
+      <div class="brand">
+        <h1>Compta MSD</h1>
+        <p>Comptabilité simplifiée & marge produit</p>
+      </div>
+      <select id="monthSelect" class="month-select" aria-label="Choisir le mois"></select>
+    </div>
+
+    <section class="cards">
+      <div class="card metric blue"><div class="label">CA encaissé</div><div class="value" id="caTotal">0,00 €</div></div>
+      <div class="card metric green"><div class="label">Marge produits</div><div class="value" id="marginTotal">0,00 €</div></div>
+      <div class="card metric purple"><div class="label">Prestations</div><div class="value" id="serviceTotal">0,00 €</div></div>
+      <div class="card metric orange"><div class="label">Ventes produits</div><div class="value" id="productTotal">0,00 €</div></div>
+    </section>
+
+    <section class="card section">
+      <div class="section-title">
+        <h2>Déclaration URSSAF</h2>
+        <small id="urssafMonth"></small>
+      </div>
+      <div class="urssaf-row"><span>Prestations de services</span><strong id="urssafService">0,00 €</strong></div>
+      <div class="urssaf-row"><span>Ventes de marchandises</span><strong id="urssafProduct">0,00 €</strong></div>
+      <div class="urssaf-row urssaf-total"><span>CA total encaissé</span><span id="urssafTotal">0,00 €</span></div>
+      <div class="hint">Les montants sont calculés à partir des encaissements enregistrés dans l'application.</div>
+    </section>
+
+    <section class="card section">
+      <div class="section-title"><h2>Chiffre d'affaires</h2><small>par semaine</small></div>
+      <div id="chart" class="chart-wrap"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><h2>Interventions</h2><small id="countEntries">0 entrée</small></div>
+      <div id="entries" class="entries"></div>
+    </section>
+
+    <section class="card section">
+      <div class="section-title"><h2>Sauvegarde</h2><small>Données</small></div>
+      <div class="tools">
+        <button class="toolbtn" id="exportBtn" type="button">Exporter</button>
+        <button class="toolbtn" id="importBtn" type="button">Importer</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <div class="sync-state" id="syncState"><span class="badge-local">● Local</span> — Supabase sera branché ensuite</div>
+    </section>
+  </main>
+
+  <button class="fab" id="addBtn" type="button">＋ Intervention</button>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h3 id="formTitle">Nouvelle intervention</h3>
+        <button class="close" id="closeBtn" type="button" aria-label="Fermer">×</button>
+      </div>
+
+      <form id="entryForm">
+        <div class="form-grid">
+          <div class="field">
+            <label for="date">Date d'encaissement</label>
+            <input id="date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="payment">Paiement</label>
+            <select id="payment">
+              <option>CB</option>
+              <option>Espèces</option>
+              <option>Virement</option>
+              <option>Chèque</option>
+              <option>Autre</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label for="client">Client / intervention</label>
+            <input id="client" type="text" placeholder="Ex. Dupont — changement cylindre" required maxlength="100">
+          </div>
+
+          <div class="field">
+            <label for="service">Main-d'œuvre encaissée (€)</label>
+            <input id="service" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+          </div>
+          <div class="field">
+            <label for="product">Produits vendus (€)</label>
+            <input id="product" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+          </div>
+
+          <div class="field full">
+            <label for="cost">Coût d'achat des produits (€)</label>
+            <input id="cost" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+          </div>
+
+          <div class="calcbox">
+            <div><small>Facture totale</small><strong id="liveInvoice">0,00 €</strong></div>
+            <div><small>Marge produit</small><strong id="liveMargin">0,00 €</strong></div>
+            <div><small>Taux de marge</small><strong id="liveRate">—</strong></div>
+            <div><small>Bénéfice brut</small><strong id="liveGross">0,00 €</strong></div>
+          </div>
+        </div>
+
+        <button class="save" type="submit" id="saveBtn">Enregistrer</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    // === CONFIGURATION SUPABASE ===
+    // Nous renseignerons ces 2 valeurs ensemble après la création du projet Supabase.
+    const SUPABASE_URL = "";
+    const SUPABASE_ANON_KEY = "";
+    // ===============================
+
+    const STORAGE_KEY = "compta_msd_v1";
+    const euro = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(Number(n)||0);
+    const root = document;
+    const $ = id => root.getElementById(id);
+
+    let entries = [];
+    let editingId = null;
+
+    function uid(){
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return Date.now().toString(36)+Math.random().toString(36).slice(2);
+    }
+
+    function todayISO(){
+      const d = new Date();
+      const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function currentMonthKey(){
+      return todayISO().slice(0,7);
+    }
+
+    function monthLabel(key){
+      const [y,m]=key.split("-").map(Number);
+      return new Intl.DateTimeFormat("fr-FR",{month:"long",year:"numeric"}).format(new Date(y,m-1,1));
+    }
+
+    function safeNum(v){
+      const n = Number(String(v).replace(",","."));
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
+    function loadLocal(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        entries = raw ? JSON.parse(raw) : [];
+        if(!Array.isArray(entries)) entries=[];
+      }catch(e){ entries=[]; }
+    }
+
+    function saveLocal(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    function refreshMonthOptions(){
+      const keys = new Set(entries.map(e=>String(e.date||"").slice(0,7)).filter(Boolean));
+      keys.add(currentMonthKey());
+      const sorted=[...keys].sort().reverse();
+      const current=$("monthSelect").value || currentMonthKey();
+      $("monthSelect").innerHTML=sorted.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join("");
+      $("monthSelect").value=sorted.includes(current)?current:sorted[0];
+    }
+
+    function selectedEntries(){
+      const month=$("monthSelect").value;
+      return entries.filter(e=>String(e.date).slice(0,7)===month).sort((a,b)=>b.date.localeCompare(a.date));
+    }
+
+    function weekOfMonth(dateStr){
+      const d=Number(dateStr.slice(8,10));
+      return Math.min(5,Math.ceil(d/7));
+    }
+
+    function renderChart(list){
+      const weekly=[0,0,0,0,0];
+      list.forEach(e=>{
+        const w=weekOfMonth(e.date)-1;
+        weekly[w]+=safeNum(e.service)+safeNum(e.product);
+      });
+      const max=Math.max(...weekly,1);
+      $("chart").innerHTML=weekly.map((v,i)=>{
+        const h=v===0?4:Math.max(8,Math.round(v/max*145));
+        return `<div class="barcol">
+          <div class="barvalue">${v?euro(v):""}</div>
+          <div class="bar" style="height:${h}px;opacity:${v?1:.18}"></div>
+          <div class="barlabel">S${i+1}</div>
+        </div>`;
+      }).join("");
+    }
+
+    function render(){
+      refreshMonthOptions();
+      const list=selectedEntries();
+      let service=0,product=0,cost=0;
+      list.forEach(e=>{service+=safeNum(e.service);product+=safeNum(e.product);cost+=safeNum(e.cost);});
+      const ca=service+product, margin=product-cost;
+
+      $("caTotal").textContent=euro(ca);
+      $("serviceTotal").textContent=euro(service);
+      $("productTotal").textContent=euro(product);
+      $("marginTotal").textContent=euro(margin);
+      $("urssafService").textContent=euro(service);
+      $("urssafProduct").textContent=euro(product);
+      $("urssafTotal").textContent=euro(ca);
+      $("urssafMonth").textContent=monthLabel($("monthSelect").value);
+      $("countEntries").textContent=`${list.length} ${list.length>1?"entrées":"entrée"}`;
+      renderChart(list);
+
+      if(!list.length){
+        $("entries").innerHTML=`<div class="card empty">Aucune intervention enregistrée pour ce mois.</div>`;
+        return;
+      }
+
+      $("entries").innerHTML=list.map(e=>{
+        const margin=safeNum(e.product)-safeNum(e.cost);
+        const rate=safeNum(e.product)>0 ? (margin/safeNum(e.product))*100 : null;
+        return `<article class="entry">
+          <div class="entry-top">
+            <div>
+              <div class="entry-name">${escapeHtml(e.client)}</div>
+              <div class="entry-meta">${formatDate(e.date)} · ${escapeHtml(e.payment||"")}</div>
+            </div>
+            <div class="entry-total">${euro(safeNum(e.service)+safeNum(e.product))}</div>
+          </div>
+          <div class="entry-bottom">
+            <div class="pill">${safeNum(e.product)>0 ? `Marge ${euro(margin)}${rate!==null?` · ${rate.toFixed(0)}%`:""}` : "Prestation"}</div>
+            <div class="actions">
+              <button class="iconbtn edit" data-id="${e.id}" type="button" aria-label="Modifier">✏️</button>
+              <button class="iconbtn danger delete" data-id="${e.id}" type="button" aria-label="Supprimer">🗑️</button>
+            </div>
+          </div>
+        </article>`;
+      }).join("");
+
+      document.querySelectorAll(".edit").forEach(b=>b.addEventListener("click",()=>openEdit(b.dataset.id)));
+      document.querySelectorAll(".delete").forEach(b=>b.addEventListener("click",()=>removeEntry(b.dataset.id)));
+    }
+
+    function escapeHtml(v=""){
+      return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+    }
+
+    function formatDate(s){
+      const [y,m,d]=s.split("-").map(Number);
+      return new Intl.DateTimeFormat("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date(y,m-1,d));
+    }
+
+    function liveCalc(){
+      const s=safeNum($("service").value), p=safeNum($("product").value), c=safeNum($("cost").value);
+      const margin=p-c;
+      $("liveInvoice").textContent=euro(s+p);
+      $("liveMargin").textContent=euro(margin);
+      $("liveGross").textContent=euro(s+margin);
+      $("liveRate").textContent=p>0 ? `${(margin/p*100).toFixed(1)} %` : "—";
+    }
+
+    function openNew(){
+      editingId=null;
+      $("formTitle").textContent="Nouvelle intervention";
+      $("saveBtn").textContent="Enregistrer";
+      $("entryForm").reset();
+      $("date").value=todayISO();
+      $("service").value="0"; $("product").value="0"; $("cost").value="0";
+      liveCalc();
+      $("overlay").classList.add("open");
+      setTimeout(()=>$("client").focus(),80);
+    }
+
+    function openEdit(id){
+      const e=entries.find(x=>x.id===id); if(!e)return;
+      editingId=id;
+      $("formTitle").textContent="Modifier l'intervention";
+      $("saveBtn").textContent="Enregistrer les modifications";
+      $("date").value=e.date;
+      $("payment").value=e.payment||"CB";
+      $("client").value=e.client||"";
+      $("service").value=e.service||0;
+      $("product").value=e.product||0;
+      $("cost").value=e.cost||0;
+      liveCalc();
+      $("overlay").classList.add("open");
+    }
+
+    function closeSheet(){ $("overlay").classList.remove("open"); }
+
+    function removeEntry(id){
+      if(!confirm("Supprimer cette intervention ?")) return;
+      entries=entries.filter(e=>e.id!==id);
+      saveLocal(); render();
+    }
+
+    $("entryForm").addEventListener("submit",e=>{
+      e.preventDefault();
+      const record={
+        id:editingId||uid(),
+        date:$("date").value||todayISO(),
+        payment:$("payment").value,
+        client:$("client").value.trim(),
+        service:safeNum($("service").value),
+        product:safeNum($("product").value),
+        cost:safeNum($("cost").value),
+        updated_at:new Date().toISOString()
+      };
+      if(!record.client){ alert("Indique le client ou le type d'intervention."); return; }
+      if(editingId){
+        entries=entries.map(x=>x.id===editingId?record:x);
+      }else{
+        entries.push(record);
+      }
+      saveLocal();
+      refreshMonthOptions();
+      $("monthSelect").value=record.date.slice(0,7);
+      closeSheet();
+      render();
+    });
+
+    ["service","product","cost"].forEach(id=>$(id).addEventListener("input",liveCalc));
+    $("addBtn").addEventListener("click",openNew);
+    $("closeBtn").addEventListener("click",closeSheet);
+    $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))closeSheet();});
+    $("monthSelect").addEventListener("change",render);
+
+    $("exportBtn").addEventListener("click",()=>{
+      const blob=new Blob([JSON.stringify({app:"Compta MSD",version:1,exported_at:new Date().toISOString(),entries},null,2)],{type:"application/json"});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download=`compta-msd-${todayISO()}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    });
+
+    $("importBtn").addEventListener("click",()=>$("importFile").click());
+    $("importFile").addEventListener("change",async e=>{
+      const file=e.target.files[0]; if(!file)return;
+      try{
+        const data=JSON.parse(await file.text());
+        const incoming=Array.isArray(data)?data:data.entries;
+        if(!Array.isArray(incoming))throw new Error("Format incorrect");
+        if(!confirm(`Importer ${incoming.length} intervention(s) et remplacer les données actuelles ?`))return;
+        entries=incoming;
+        saveLocal(); render();
+      }catch(err){ alert("Impossible d'importer ce fichier."); }
+      e.target.value="";
+    });
+
+    async function supabaseReady(){
+      return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+    }
+
+    if(SUPABASE_URL && SUPABASE_ANON_KEY){
+      $("syncState").innerHTML='<span class="badge-online">● Supabase configuré</span>';
+    }
+
+    loadLocal();
+    $("date").value=todayISO();
+    refreshMonthOptions();
+    $("monthSelect").value=currentMonthKey();
+    liveCalc();
+    render();
+  })();
+  </script>
+</body>
+</html>
