@@ -80,6 +80,23 @@
     .badge-online{color:var(--green);font-weight:700}
     .badge-local{color:var(--orange);font-weight:700}
     .hint{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
+    .view-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 14px}
+    .view-btn{border:1px solid var(--border);background:var(--panel);border-radius:13px;padding:11px 12px;font-weight:800}
+    .view-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .ca-highlight{font-weight:900!important;color:var(--blue)!important}
+    .annual-panel[hidden]{display:none!important}
+    .annual-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .annual-chart{height:230px;display:flex;align-items:flex-end;gap:5px;padding-top:22px;overflow-x:auto}
+    .annual-barcol{min-width:42px;flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}
+    .annual-bar{width:70%;min-height:4px;border-radius:9px 9px 3px 3px;background:linear-gradient(180deg,var(--blue),#60a5fa)}
+    .annual-table-wrap{overflow-x:auto}
+    .annual-table{width:100%;border-collapse:collapse;min-width:680px}
+    .annual-table th,.annual-table td{padding:11px 9px;border-bottom:1px solid var(--border);text-align:right;font-size:13px}
+    .annual-table th:first-child,.annual-table td:first-child{text-align:left}
+    .annual-table th{color:var(--muted);font-size:12px}
+    .annual-table .ca-cell{font-weight:900;color:var(--blue)}
+    .annual-table tfoot td{font-weight:900;border-top:2px solid var(--border);border-bottom:0}
+    .year-select{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;color:var(--text);font-weight:700}
     .auth-screen{max-width:460px;margin:60px auto 0;padding:0 14px}
     .auth-card{background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:var(--shadow)}
     .auth-card h1{margin:0 0 6px;font-size:25px}
@@ -123,8 +140,14 @@
       <select id="monthSelect" class="month-select" aria-label="Choisir le mois"></select>
     </div>
 
+    <div class="view-switch">
+      <button id="monthViewBtn" class="view-btn active" type="button">Mois</button>
+      <button id="yearViewBtn" class="view-btn" type="button">Année</button>
+    </div>
+
+    <div id="monthPanel">
     <section class="cards">
-      <div class="card metric blue"><div class="label">CA encaissé</div><div class="value" id="caTotal">0,00 €</div></div>
+      <div class="card metric blue"><div class="label">CA encaissé</div><div class="value" id="caTotal" class="ca-highlight">0,00 €</div></div>
       <div class="card metric green"><div class="label">Marge produits</div><div class="value" id="marginTotal">0,00 €</div></div>
       <div class="card metric purple"><div class="label">Prestations</div><div class="value" id="serviceTotal">0,00 €</div></div>
       <div class="card metric orange"><div class="label">Ventes produits</div><div class="value" id="productTotal">0,00 €</div></div>
@@ -161,6 +184,73 @@
       <div class="sync-state" id="syncState"><span class="badge-local">● Local</span> — Supabase sera branché ensuite</div>
     </section>
     <button class="fab" id="addBtn" type="button">＋ Ajouter une intervention</button>
+    </div>
+
+    <section id="yearPanel" class="annual-panel" hidden>
+      <div class="card section">
+        <div class="section-title">
+          <div>
+            <h2>Bilan annuel</h2>
+            <small>Vue janvier à décembre</small>
+          </div>
+          <select id="yearSelect" class="year-select" aria-label="Choisir l'année"></select>
+        </div>
+
+        <div class="annual-summary">
+          <div class="card metric blue">
+            <div class="label">CA annuel</div>
+            <div class="value ca-highlight" id="annualCA">0,00 €</div>
+          </div>
+          <div class="card metric green">
+            <div class="label">Marge produits</div>
+            <div class="value" id="annualMargin">0,00 €</div>
+          </div>
+          <div class="card metric purple">
+            <div class="label">Prestations</div>
+            <div class="value" id="annualServices">0,00 €</div>
+          </div>
+          <div class="card metric orange">
+            <div class="label">Ventes produits</div>
+            <div class="value" id="annualProducts">0,00 €</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card section">
+        <div class="section-title"><h2>Évolution du CA</h2><small>par mois</small></div>
+        <div id="annualChart" class="annual-chart"></div>
+      </div>
+
+      <div class="card section">
+        <div class="section-title"><h2>Détail mensuel</h2><small id="annualCount">0 intervention</small></div>
+        <div class="annual-table-wrap">
+          <table class="annual-table">
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th>Prestations</th>
+                <th>Ventes</th>
+                <th>CA</th>
+                <th>Coût produits</th>
+                <th>Marge</th>
+              </tr>
+            </thead>
+            <tbody id="annualTableBody"></tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td id="annualFootServices">0,00 €</td>
+                <td id="annualFootProducts">0,00 €</td>
+                <td id="annualFootCA" class="ca-cell">0,00 €</td>
+                <td id="annualFootCost">0,00 €</td>
+                <td id="annualFootMargin">0,00 €</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="formTitle">
@@ -463,6 +553,94 @@
       }).join("");
     }
 
+    function availableYears(){
+      const years=new Set(entries.map(e=>String(e.date||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y)));
+      years.add(String(new Date().getFullYear()));
+      return [...years].sort().reverse();
+    }
+
+    function refreshYearOptions(){
+      const years=availableYears();
+      const current=$("yearSelect")?.value || String(new Date().getFullYear());
+      $("yearSelect").innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join("");
+      $("yearSelect").value=years.includes(current)?current:years[0];
+    }
+
+    function annualRows(year){
+      const months=Array.from({length:12},(_,i)=>({
+        month:i+1, service:0, product:0, cost:0, count:0
+      }));
+      entries.filter(e=>String(e.date||"").startsWith(year+"-")).forEach(e=>{
+        const m=Math.max(1,Math.min(12,Number(String(e.date).slice(5,7))))-1;
+        months[m].service+=safeNum(e.service);
+        months[m].product+=safeNum(e.product);
+        months[m].cost+=safeNum(e.cost);
+        months[m].count+=1;
+      });
+      return months;
+    }
+
+    function renderAnnual(){
+      if(!$("yearSelect")) return;
+      refreshYearOptions();
+      const year=$("yearSelect").value;
+      const rows=annualRows(year);
+      const names=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+      const total=rows.reduce((a,r)=>({
+        service:a.service+r.service,
+        product:a.product+r.product,
+        cost:a.cost+r.cost,
+        count:a.count+r.count
+      }),{service:0,product:0,cost:0,count:0});
+      const ca=total.service+total.product;
+      const margin=total.product-total.cost;
+
+      $("annualCA").textContent=euro(ca);
+      $("annualServices").textContent=euro(total.service);
+      $("annualProducts").textContent=euro(total.product);
+      $("annualMargin").textContent=euro(margin);
+      $("annualCount").textContent=`${total.count} ${total.count>1?"interventions":"intervention"}`;
+
+      $("annualFootServices").textContent=euro(total.service);
+      $("annualFootProducts").textContent=euro(total.product);
+      $("annualFootCA").textContent=euro(ca);
+      $("annualFootCost").textContent=euro(total.cost);
+      $("annualFootMargin").textContent=euro(margin);
+
+      $("annualTableBody").innerHTML=rows.map((r,i)=>{
+        const mca=r.service+r.product;
+        const mmargin=r.product-r.cost;
+        return `<tr>
+          <td>${names[i]}</td>
+          <td>${euro(r.service)}</td>
+          <td>${euro(r.product)}</td>
+          <td class="ca-cell">${euro(mca)}</td>
+          <td>${euro(r.cost)}</td>
+          <td>${euro(mmargin)}</td>
+        </tr>`;
+      }).join("");
+
+      const cas=rows.map(r=>r.service+r.product);
+      const max=Math.max(...cas,1);
+      $("annualChart").innerHTML=cas.map((v,i)=>{
+        const h=v===0?4:Math.max(8,Math.round(v/max*160));
+        return `<div class="annual-barcol">
+          <div class="barvalue">${v?euro(v):""}</div>
+          <div class="annual-bar" style="height:${h}px;opacity:${v?1:.18}"></div>
+          <div class="barlabel">${names[i].slice(0,3)}</div>
+        </div>`;
+      }).join("");
+    }
+
+    function setView(view){
+      const annual=view==="year";
+      $("monthPanel").hidden=annual;
+      $("yearPanel").hidden=!annual;
+      $("monthViewBtn").classList.toggle("active",!annual);
+      $("yearViewBtn").classList.toggle("active",annual);
+      if(annual) renderAnnual();
+    }
+
     function render(){
       refreshMonthOptions();
       const list=selectedEntries();
@@ -480,6 +658,7 @@
       $("urssafMonth").textContent=monthLabel($("monthSelect").value);
       $("countEntries").textContent=`${list.length} ${list.length>1?"entrées":"entrée"}`;
       renderChart(list);
+      if($("yearPanel") && !$("yearPanel").hidden) renderAnnual();
 
       if(!list.length){
         $("entries").innerHTML=`<div class="card empty">Aucune intervention enregistrée pour ce mois.</div>`;
@@ -616,6 +795,9 @@
     $("closeBtn").addEventListener("click",closeSheet);
     $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))closeSheet();});
     $("monthSelect").addEventListener("change",render);
+    $("monthViewBtn").addEventListener("click",()=>setView("month"));
+    $("yearViewBtn").addEventListener("click",()=>setView("year"));
+    $("yearSelect").addEventListener("change",renderAnnual);
 
     $("loginForm").addEventListener("submit",async e=>{
       e.preventDefault();
@@ -627,7 +809,7 @@
         $("loginPassword").value="";
         showApp();
         const ok=await loadSupabase();
-        if(ok){ refreshMonthOptions(); $("monthSelect").value=currentMonthKey(); render(); }
+        if(ok){ refreshMonthOptions(); refreshYearOptions(); $("monthSelect").value=currentMonthKey(); render(); renderAnnual(); }
       }catch(err){
         $("loginError").textContent="E-mail ou mot de passe incorrect.";
       }finally{
@@ -679,13 +861,16 @@
     loadAuthLocal();
     $("date").value=todayISO();
     refreshMonthOptions();
+    refreshYearOptions();
     $("monthSelect").value=currentMonthKey();
+    $("yearSelect").value=String(new Date().getFullYear());
     liveCalc();
     render();
+    renderAnnual();
 
     if(authSession?.access_token){
       showApp();
-      loadSupabase().then(ok=>{ if(ok){ refreshMonthOptions(); $("monthSelect").value=currentMonthKey(); render(); } });
+      loadSupabase().then(ok=>{ if(ok){ refreshMonthOptions(); refreshYearOptions(); $("monthSelect").value=currentMonthKey(); render(); renderAnnual(); } });
     }else{
       showLogin();
     }
