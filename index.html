@@ -80,16 +80,45 @@
     .badge-online{color:var(--green);font-weight:700}
     .badge-local{color:var(--orange);font-weight:700}
     .hint{font-size:12px;color:var(--muted);line-height:1.4;margin-top:8px}
+    .auth-screen{max-width:460px;margin:60px auto 0;padding:0 14px}
+    .auth-card{background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:var(--shadow)}
+    .auth-card h1{margin:0 0 6px;font-size:25px}
+    .auth-card p{margin:0 0 18px;color:var(--muted);line-height:1.45}
+    .auth-error{min-height:20px;margin-top:10px;color:var(--red);font-size:13px}
+    .auth-submit{width:100%;min-height:50px;border:0;border-radius:14px;background:var(--blue);color:#fff;font-weight:800;padding:12px}
+    .auth-submit:disabled,.save:disabled{opacity:.6;cursor:wait}
+    .account-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+    .logout-btn{border:1px solid var(--border);background:var(--panel);border-radius:11px;padding:8px 10px;font-size:12px;font-weight:700}
     @media (min-width:720px){.cards{grid-template-columns:repeat(4,1fr)}.sheet{border-radius:24px;margin-bottom:20px}}
     @media (max-width:380px){.app{padding-left:10px;padding-right:10px}.metric .value{font-size:18px}.form-grid{grid-template-columns:1fr}.calcbox{grid-column:auto}.field.full{grid-column:auto}}
   </style>
 </head>
 <body>
-  <main class="app">
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <h1>Compta MSD</h1>
+      <p>Connexion sécurisée à ta comptabilité.</p>
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginEmail">Adresse e-mail</label>
+          <input id="loginEmail" type="email" value="mtp.serrure@gmail.com" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="loginPassword">Mot de passe</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
+        </div>
+        <button id="loginBtn" class="auth-submit" type="submit">Se connecter</button>
+        <div id="loginError" class="auth-error" aria-live="polite"></div>
+      </form>
+    </div>
+  </section>
+
+  <main class="app" id="mainApp" hidden>
     <div class="top">
       <div class="brand">
         <h1>Compta MSD</h1>
         <p>Comptabilité simplifiée & marge produit</p>
+        <div class="account-row"><small id="accountEmail"></small><button id="logoutBtn" class="logout-btn" type="button">Déconnexion</button></div>
       </div>
       <select id="monthSelect" class="month-select" aria-label="Choisir le mois"></select>
     </div>
@@ -196,8 +225,8 @@
 
     // === CONFIGURATION SUPABASE ===
     // Nous renseignerons ces 2 valeurs ensemble après la création du projet Supabase.
-    const SUPABASE_URL = "";
-    const SUPABASE_ANON_KEY = "";
+    const SUPABASE_URL = "https://eeztmlqctbqrpugrjsdq.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_JQ2f5Jzk4XuAhsOeSSP3Fg_m192O_kB";
     // ===============================
 
     const STORAGE_KEY = "compta_msd_v1";
@@ -207,6 +236,8 @@
 
     let entries = [];
     let editingId = null;
+    let authSession = null;
+    const AUTH_KEY = "compta_msd_auth";
 
     function uid(){
       if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -243,6 +274,157 @@
 
     function saveLocal(){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    function saveAuth(session){
+      authSession=session;
+      if(session) localStorage.setItem(AUTH_KEY,JSON.stringify(session));
+      else localStorage.removeItem(AUTH_KEY);
+    }
+
+    function loadAuthLocal(){
+      try{
+        const raw=localStorage.getItem(AUTH_KEY);
+        authSession=raw?JSON.parse(raw):null;
+      }catch(e){authSession=null;}
+    }
+
+    async function signIn(email,password){
+      const r=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`,{
+        method:"POST",
+        headers:{
+          "apikey":SUPABASE_ANON_KEY,
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({email,password})
+      });
+      const data=await r.json();
+      if(!r.ok) throw new Error(data.error_description||data.msg||data.message||"Connexion impossible");
+      data.expires_at_ms=Date.now()+((Number(data.expires_in)||3600)*1000);
+      saveAuth(data);
+      return data;
+    }
+
+    async function refreshAuth(){
+      if(!authSession?.refresh_token) return false;
+      try{
+        const r=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,{
+          method:"POST",
+          headers:{
+            "apikey":SUPABASE_ANON_KEY,
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({refresh_token:authSession.refresh_token})
+        });
+        const data=await r.json();
+        if(!r.ok) throw new Error(data.message||"Session expirée");
+        data.expires_at_ms=Date.now()+((Number(data.expires_in)||3600)*1000);
+        saveAuth(data);
+        return true;
+      }catch(e){
+        saveAuth(null);
+        return false;
+      }
+    }
+
+    async function ensureAuth(){
+      if(!authSession?.access_token) return false;
+      if((authSession.expires_at_ms||0) > Date.now()+60000) return true;
+      return await refreshAuth();
+    }
+
+    function apiHeaders(extra={}){
+      return {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + (authSession?.access_token||""),
+        "Content-Type": "application/json",
+        ...extra
+      };
+    }
+
+    function showLogin(message=""){
+      $("mainApp").hidden=true;
+      $("authScreen").hidden=false;
+      $("loginError").textContent=message;
+    }
+
+    function showApp(){
+      $("authScreen").hidden=true;
+      $("mainApp").hidden=false;
+      $("accountEmail").textContent=authSession?.user?.email||"";
+    }
+
+    async function loadSupabase(){
+      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+      if(!(await ensureAuth())){ showLogin(); return false; }
+      try{
+        let r = await fetch(`${SUPABASE_URL}/rest/v1/interventions?select=*&order=date.desc,created_at.desc`, {
+          headers: apiHeaders()
+        });
+        if(r.status===401 && await refreshAuth()){
+          r=await fetch(`${SUPABASE_URL}/rest/v1/interventions?select=*&order=date.desc,created_at.desc`,{headers:apiHeaders()});
+        }
+        if(!r.ok) throw new Error(await r.text());
+        entries = await r.json();
+        saveLocal();
+        $("syncState").innerHTML='<span class="badge-online">● Supabase connecté</span> — données synchronisées';
+        showApp();
+        return true;
+      }catch(err){
+        console.error("Supabase load:", err);
+        if(String(err).includes("JWT") || String(err).includes("401")) showLogin("Ta session a expiré. Reconnecte-toi.");
+        else $("syncState").innerHTML='<span class="badge-local">● Local</span> — connexion Supabase impossible';
+        return false;
+      }
+    }
+
+    async function insertSupabase(record){
+      if(!(await ensureAuth())) throw new Error("Session expirée");
+      const payload = {
+        date: record.date,
+        client: record.client,
+        payment: record.payment,
+        service: record.service,
+        product: record.product,
+        cost: record.cost
+      };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/interventions`, {
+        method:"POST",
+        headers:apiHeaders({"Prefer":"return=representation"}),
+        body:JSON.stringify(payload)
+      });
+      if(!r.ok) throw new Error(await r.text());
+      const rows=await r.json();
+      return rows[0];
+    }
+
+    async function updateSupabase(id, record){
+      if(!(await ensureAuth())) throw new Error("Session expirée");
+      const payload = {
+        date: record.date,
+        client: record.client,
+        payment: record.payment,
+        service: record.service,
+        product: record.product,
+        cost: record.cost
+      };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/interventions?id=eq.${encodeURIComponent(id)}`, {
+        method:"PATCH",
+        headers:apiHeaders({"Prefer":"return=representation"}),
+        body:JSON.stringify(payload)
+      });
+      if(!r.ok) throw new Error(await r.text());
+      const rows=await r.json();
+      return rows[0];
+    }
+
+    async function deleteSupabase(id){
+      if(!(await ensureAuth())) throw new Error("Session expirée");
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/interventions?id=eq.${encodeURIComponent(id)}`, {
+        method:"DELETE",
+        headers:apiHeaders()
+      });
+      if(!r.ok) throw new Error(await r.text());
     }
 
     function refreshMonthOptions(){
@@ -376,35 +558,57 @@
 
     function closeSheet(){ $("overlay").classList.remove("open"); }
 
-    function removeEntry(id){
+    async function removeEntry(id){
       if(!confirm("Supprimer cette intervention ?")) return;
-      entries=entries.filter(e=>e.id!==id);
-      saveLocal(); render();
+      try{
+        if(SUPABASE_URL && SUPABASE_ANON_KEY) await deleteSupabase(id);
+        entries=entries.filter(e=>String(e.id)!==String(id));
+        saveLocal(); render();
+      }catch(err){
+        console.error(err);
+        alert("Suppression impossible dans Supabase. Vérifie les autorisations de la table.");
+      }
     }
 
-    $("entryForm").addEventListener("submit",e=>{
+    $("entryForm").addEventListener("submit",async e=>{
       e.preventDefault();
       const record={
-        id:editingId||uid(),
         date:$("date").value||todayISO(),
         payment:$("payment").value,
         client:$("client").value.trim(),
         service:safeNum($("service").value),
         product:safeNum($("product").value),
-        cost:safeNum($("cost").value),
-        updated_at:new Date().toISOString()
+        cost:safeNum($("cost").value)
       };
       if(!record.client){ alert("Indique le client ou le type d'intervention."); return; }
-      if(editingId){
-        entries=entries.map(x=>x.id===editingId?record:x);
-      }else{
-        entries.push(record);
+      $("saveBtn").disabled=true;
+      $("saveBtn").textContent="Enregistrement…";
+      try{
+        if(SUPABASE_URL && SUPABASE_ANON_KEY){
+          if(editingId){
+            const saved=await updateSupabase(editingId,record);
+            entries=entries.map(x=>String(x.id)===String(editingId)?saved:x);
+          }else{
+            const saved=await insertSupabase(record);
+            entries.push(saved);
+          }
+          $("syncState").innerHTML='<span class="badge-online">● Supabase connecté</span> — données synchronisées';
+        }else{
+          const localRecord={...record,id:editingId||uid(),created_at:new Date().toISOString()};
+          if(editingId) entries=entries.map(x=>String(x.id)===String(editingId)?localRecord:x); else entries.push(localRecord);
+        }
+        saveLocal();
+        refreshMonthOptions();
+        $("monthSelect").value=record.date.slice(0,7);
+        closeSheet();
+        render();
+      }catch(err){
+        console.error(err);
+        alert("Enregistrement impossible dans Supabase. Vérifie les autorisations de la table.");
+      }finally{
+        $("saveBtn").disabled=false;
+        $("saveBtn").textContent=editingId?"Enregistrer les modifications":"Enregistrer";
       }
-      saveLocal();
-      refreshMonthOptions();
-      $("monthSelect").value=record.date.slice(0,7);
-      closeSheet();
-      render();
     });
 
     ["service","product","cost"].forEach(id=>$(id).addEventListener("input",liveCalc));
@@ -412,6 +616,33 @@
     $("closeBtn").addEventListener("click",closeSheet);
     $("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))closeSheet();});
     $("monthSelect").addEventListener("change",render);
+
+    $("loginForm").addEventListener("submit",async e=>{
+      e.preventDefault();
+      $("loginError").textContent="";
+      $("loginBtn").disabled=true;
+      $("loginBtn").textContent="Connexion…";
+      try{
+        await signIn($("loginEmail").value.trim(),$("loginPassword").value);
+        $("loginPassword").value="";
+        showApp();
+        const ok=await loadSupabase();
+        if(ok){ refreshMonthOptions(); $("monthSelect").value=currentMonthKey(); render(); }
+      }catch(err){
+        $("loginError").textContent="E-mail ou mot de passe incorrect.";
+      }finally{
+        $("loginBtn").disabled=false;
+        $("loginBtn").textContent="Se connecter";
+      }
+    });
+
+    $("logoutBtn").addEventListener("click",()=>{
+      saveAuth(null);
+      entries=[];
+      saveLocal();
+      render();
+      showLogin();
+    });
 
     $("exportBtn").addEventListener("click",()=>{
       const blob=new Blob([JSON.stringify({app:"Compta MSD",version:1,exported_at:new Date().toISOString(),entries},null,2)],{type:"application/json"});
@@ -445,11 +676,19 @@
     }
 
     loadLocal();
+    loadAuthLocal();
     $("date").value=todayISO();
     refreshMonthOptions();
     $("monthSelect").value=currentMonthKey();
     liveCalc();
     render();
+
+    if(authSession?.access_token){
+      showApp();
+      loadSupabase().then(ok=>{ if(ok){ refreshMonthOptions(); $("monthSelect").value=currentMonthKey(); render(); } });
+    }else{
+      showLogin();
+    }
   })();
   </script>
 </body>
