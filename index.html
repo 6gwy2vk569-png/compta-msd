@@ -284,16 +284,16 @@
 
           <div class="field">
             <label for="service">Main-d'œuvre encaissée (€)</label>
-            <input id="service" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+            <input id="service" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
           </div>
           <div class="field">
             <label for="product">Produits vendus (€)</label>
-            <input id="product" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+            <input id="product" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
           </div>
 
           <div class="field full">
             <label for="cost">Coût d'achat des produits (€)</label>
-            <input id="cost" type="number" min="0" step="0.01" inputmode="decimal" value="0">
+            <input id="cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
           </div>
 
           <div class="calcbox">
@@ -719,7 +719,7 @@
       $("saveBtn").textContent="Enregistrer";
       $("entryForm").reset();
       $("date").value=todayISO();
-      $("service").value="0"; $("product").value="0"; $("cost").value="0";
+      $("service").value=""; $("product").value=""; $("cost").value="";
       liveCalc();
       $("overlay").classList.add("open");
       setTimeout(()=>$("client").focus(),80);
