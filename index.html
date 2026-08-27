@@ -518,12 +518,17 @@
     }
 
     function refreshMonthOptions(){
-      const keys = new Set(entries.map(e=>String(e.date||"").slice(0,7)).filter(Boolean));
-      keys.add(currentMonthKey());
-      const sorted=[...keys].sort().reverse();
+      const years = new Set(entries.map(e=>String(e.date||"").slice(0,4)).filter(y=>/^\\d{4}$/.test(y)));
+      years.add(String(new Date().getFullYear()));
+      const keys = [];
+      [...years].sort().reverse().forEach(y=>{
+        for(let m=12;m>=1;m--){
+          keys.push(`${y}-${String(m).padStart(2,"0")}`);
+        }
+      });
       const current=$("monthSelect").value || currentMonthKey();
-      $("monthSelect").innerHTML=sorted.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join("");
-      $("monthSelect").value=sorted.includes(current)?current:sorted[0];
+      $("monthSelect").innerHTML=keys.map(k=>`<option value="${k}">${monthLabel(k)}</option>`).join("");
+      $("monthSelect").value=keys.includes(current)?current:currentMonthKey();
     }
 
     function selectedEntries(){
