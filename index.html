@@ -542,7 +542,7 @@
     }
 
     function openEdit(id){
-      const e=entries.find(x=>x.id===id); if(!e)return;
+      const e=entries.find(x=>String(x.id)===String(id)); if(!e)return;
       editingId=id;
       $("formTitle").textContent="Modifier l'intervention";
       $("saveBtn").textContent="Enregistrer les modifications";
