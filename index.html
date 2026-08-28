@@ -105,6 +105,10 @@
     .auth-submit{width:100%;min-height:50px;border:0;border-radius:14px;background:var(--blue);color:#fff;font-weight:800;padding:12px}
     .pending-check{grid-column:1/-1;display:flex;align-items:center;gap:11px;padding:13px 14px;border:1px solid #f0c36d;background:#fff8e8;border-radius:14px;font-weight:800;cursor:pointer}
     .pending-check input{width:21px;height:21px;margin:0;accent-color:#e59b18}
+    .service-type-check{background:#eef6ff;border-color:#b8d7ff}
+    .service-type-check input{accent-color:var(--blue)}
+    .service-type-badge{display:inline-flex;align-items:center;background:#eef6ff;color:var(--blue);border:1px solid #b8d7ff;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
+    .date-rule-note{font-size:12px;color:var(--muted);margin-top:-2px;padding:0 2px 4px}
     .pending-note{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
     .pending-badge{display:inline-flex;align-items:center;gap:5px;background:#fff1cf;color:#9a6100;border:1px solid #f0c36d;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
     .outstanding{margin:14px 0;background:#fff8e8;border:1px solid #f0c36d;border-radius:18px;padding:14px}
@@ -304,6 +308,13 @@
               <span class="pending-note">À cocher pour un virement, chèque ou autre paiement pas encore reçu.</span>
             </span>
           </label>
+          <label class="pending-check service-type-check">
+            <input id="serviceType" type="checkbox">
+            <span>Prestation de services
+              <span class="pending-note">Facultatif — si non coché, l’intervention reste comme actuellement.</span>
+            </span>
+          </label>
+          <div class="date-rule-note">✓ Sans « Paiement en attente », l’encaissement est automatiquement rattaché à la date de l’intervention.</div>
 
           <div class="field">
             <label for="service">Main-d'œuvre encaissée (€)</label>
@@ -499,6 +510,7 @@
         payment: record.payment,
         payment_pending: record.payment_pending,
         paid_date: record.paid_date,
+        service_type: record.service_type,
         service: record.service,
         product: record.product,
         cost: record.cost
@@ -521,6 +533,7 @@
         payment: record.payment,
         payment_pending: record.payment_pending,
         paid_date: record.paid_date,
+        service_type: record.service_type,
         service: record.service,
         product: record.product,
         cost: record.cost
@@ -716,7 +729,7 @@
           <div class="entry-top">
             <div>
               <div class="entry-name">${escapeHtml(e.client)}</div>
-              <div class="entry-meta">${formatDate(e.date)} · ${escapeHtml(e.payment||"")} ${e.payment_pending?'<span class="pending-badge">⏳ En attente</span>':""}</div>
+              <div class="entry-meta">${formatDate(e.date)} · ${escapeHtml(e.payment||"")} ${e.payment_pending?'<span class="pending-badge">⏳ En attente</span>':""} ${e.service_type?'<span class="service-type-badge">Prestation de services</span>':""}</div>
             </div>
             <div class="entry-total">${euro(safeNum(e.service)+safeNum(e.product))}</div>
           </div>
@@ -761,6 +774,7 @@
       $("service").value=""; $("product").value=""; $("cost").value="";
       $("paymentPending").checked=false;
       $("paymentPending").dataset.wasPending="false";
+      $("serviceType").checked=false;
       liveCalc();
       $("overlay").classList.add("open");
       setTimeout(()=>$("client").focus(),80);
@@ -779,6 +793,7 @@
       $("cost").value=e.cost||0;
       $("paymentPending").checked=Boolean(e.payment_pending);
       $("paymentPending").dataset.wasPending=String(Boolean(e.payment_pending));
+      $("serviceType").checked=Boolean(e.service_type);
       liveCalc();
       $("overlay").classList.add("open");
     }
@@ -806,13 +821,14 @@
       let paidDate=null;
       if(!pending){
         if(wasPending) paidDate=todayISO();
-        else paidDate=(existing && existing.paid_date) ? existing.paid_date : interventionDate;
+        else paidDate=interventionDate;
       }
       const record={
         date:interventionDate,
         payment:$("payment").value,
         payment_pending:pending,
         paid_date:paidDate,
+        service_type:$("serviceType").checked,
         client:$("client").value.trim(),
         service:safeNum($("service").value),
         product:safeNum($("product").value),
