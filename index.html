@@ -103,6 +103,14 @@
     .auth-card p{margin:0 0 18px;color:var(--muted);line-height:1.45}
     .auth-error{min-height:20px;margin-top:10px;color:var(--red);font-size:13px}
     .auth-submit{width:100%;min-height:50px;border:0;border-radius:14px;background:var(--blue);color:#fff;font-weight:800;padding:12px}
+    .pending-check{grid-column:1/-1;display:flex;align-items:center;gap:11px;padding:13px 14px;border:1px solid #f0c36d;background:#fff8e8;border-radius:14px;font-weight:800;cursor:pointer}
+    .pending-check input{width:21px;height:21px;margin:0;accent-color:#e59b18}
+    .pending-note{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
+    .pending-badge{display:inline-flex;align-items:center;gap:5px;background:#fff1cf;color:#9a6100;border:1px solid #f0c36d;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
+    .outstanding{margin:14px 0;background:#fff8e8;border:1px solid #f0c36d;border-radius:18px;padding:14px}
+    .outstanding-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900}
+    .outstanding-list{margin-top:10px;display:grid;gap:8px}
+    .outstanding-row{display:flex;justify-content:space-between;gap:10px;padding-top:8px;border-top:1px solid #f3d99e;font-size:13px}
     .auth-submit:disabled,.save:disabled{opacity:.6;cursor:wait}
     .account-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
     .logout-btn{border:1px solid var(--border);background:var(--panel);border-radius:11px;padding:8px 10px;font-size:12px;font-weight:700}
@@ -144,6 +152,14 @@
       <button id="monthViewBtn" class="view-btn active" type="button">Mois</button>
       <button id="yearViewBtn" class="view-btn" type="button">Année</button>
     </div>
+
+    <section id="outstandingBox" class="outstanding" hidden>
+      <div class="outstanding-head">
+        <span>⏳ À encaisser</span>
+        <strong id="outstandingTotal">0,00 €</strong>
+      </div>
+      <div id="outstandingList" class="outstanding-list"></div>
+    </section>
 
     <div id="monthPanel">
     <section class="cards">
@@ -263,7 +279,7 @@
       <form id="entryForm">
         <div class="form-grid">
           <div class="field">
-            <label for="date">Date d'encaissement</label>
+            <label for="date">Date de l’intervention</label>
             <input id="date" type="date" required>
           </div>
           <div class="field">
@@ -281,6 +297,13 @@
             <label for="client">Client / intervention</label>
             <input id="client" type="text" placeholder="Ex. Dupont — changement cylindre" required maxlength="100">
           </div>
+
+          <label class="pending-check">
+            <input id="paymentPending" type="checkbox">
+            <span>Paiement en attente
+              <span class="pending-note">À cocher pour un virement, chèque ou autre paiement pas encore reçu.</span>
+            </span>
+          </label>
 
           <div class="field">
             <label for="service">Main-d'œuvre encaissée (€)</label>
@@ -474,6 +497,8 @@
         date: record.date,
         client: record.client,
         payment: record.payment,
+        payment_pending: record.payment_pending,
+        paid_date: record.paid_date,
         service: record.service,
         product: record.product,
         cost: record.cost
@@ -494,6 +519,8 @@
         date: record.date,
         client: record.client,
         payment: record.payment,
+        payment_pending: record.payment_pending,
+        paid_date: record.paid_date,
         service: record.service,
         product: record.product,
         cost: record.cost
@@ -575,8 +602,9 @@
       const months=Array.from({length:12},(_,i)=>({
         month:i+1, service:0, product:0, cost:0, count:0
       }));
-      entries.filter(e=>String(e.date||"").startsWith(year+"-")).forEach(e=>{
-        const m=Math.max(1,Math.min(12,Number(String(e.date).slice(5,7))))-1;
+      entries.filter(e=>!e.payment_pending && String(e.paid_date||e.date||"").startsWith(year+"-")).forEach(e=>{
+        const accountingDate=String(e.paid_date||e.date);
+        const m=Math.max(1,Math.min(12,Number(accountingDate.slice(5,7))))-1;
         months[m].service+=safeNum(e.service);
         months[m].product+=safeNum(e.product);
         months[m].cost+=safeNum(e.cost);
@@ -649,9 +677,20 @@
     function render(){
       refreshMonthOptions();
       const list=selectedEntries();
+      const monthKey=$("monthSelect").value;
+      const paidList=entries.filter(e=>!e.payment_pending && String(e.paid_date||e.date||"").slice(0,7)===monthKey);
       let service=0,product=0,cost=0;
-      list.forEach(e=>{service+=safeNum(e.service);product+=safeNum(e.product);cost+=safeNum(e.cost);});
+      paidList.forEach(e=>{service+=safeNum(e.service);product+=safeNum(e.product);cost+=safeNum(e.cost);});
       const ca=service+product, margin=product-cost;
+
+      const pending=entries.filter(e=>e.payment_pending);
+      const pendingTotal=pending.reduce((s,e)=>s+safeNum(e.service)+safeNum(e.product),0);
+      $("outstandingBox").hidden=!pending.length;
+      $("outstandingTotal").textContent=euro(pendingTotal);
+      $("outstandingList").innerHTML=pending.map(e=>`<div class="outstanding-row">
+        <span>${escapeHtml(e.client)} · ${formatDate(e.date)}</span>
+        <strong>${euro(safeNum(e.service)+safeNum(e.product))}</strong>
+      </div>`).join("");
 
       $("caTotal").textContent=euro(ca);
       $("serviceTotal").textContent=euro(service);
@@ -662,7 +701,7 @@
       $("urssafTotal").textContent=euro(ca);
       $("urssafMonth").textContent=monthLabel($("monthSelect").value);
       $("countEntries").textContent=`${list.length} ${list.length>1?"entrées":"entrée"}`;
-      renderChart(list);
+      renderChart(paidList);
       if($("yearPanel") && !$("yearPanel").hidden) renderAnnual();
 
       if(!list.length){
@@ -677,7 +716,7 @@
           <div class="entry-top">
             <div>
               <div class="entry-name">${escapeHtml(e.client)}</div>
-              <div class="entry-meta">${formatDate(e.date)} · ${escapeHtml(e.payment||"")}</div>
+              <div class="entry-meta">${formatDate(e.date)} · ${escapeHtml(e.payment||"")} ${e.payment_pending?'<span class="pending-badge">⏳ En attente</span>':""}</div>
             </div>
             <div class="entry-total">${euro(safeNum(e.service)+safeNum(e.product))}</div>
           </div>
@@ -720,6 +759,8 @@
       $("entryForm").reset();
       $("date").value=todayISO();
       $("service").value=""; $("product").value=""; $("cost").value="";
+      $("paymentPending").checked=false;
+      $("paymentPending").dataset.wasPending="false";
       liveCalc();
       $("overlay").classList.add("open");
       setTimeout(()=>$("client").focus(),80);
@@ -736,6 +777,8 @@
       $("service").value=e.service||0;
       $("product").value=e.product||0;
       $("cost").value=e.cost||0;
+      $("paymentPending").checked=Boolean(e.payment_pending);
+      $("paymentPending").dataset.wasPending=String(Boolean(e.payment_pending));
       liveCalc();
       $("overlay").classList.add("open");
     }
@@ -747,7 +790,7 @@
       try{
         if(SUPABASE_URL && SUPABASE_ANON_KEY) await deleteSupabase(id);
         entries=entries.filter(e=>String(e.id)!==String(id));
-        saveLocal(); render();
+        saveLocal(); render(); renderAnnual();
       }catch(err){
         console.error(err);
         alert("Suppression impossible dans Supabase. Vérifie les autorisations de la table.");
@@ -756,9 +799,20 @@
 
     $("entryForm").addEventListener("submit",async e=>{
       e.preventDefault();
+      const pending=$("paymentPending").checked;
+      const wasPending=$("paymentPending").dataset.wasPending==="true";
+      const existing=editingId ? entries.find(x=>String(x.id)===String(editingId)) : null;
+      const interventionDate=$("date").value||todayISO();
+      let paidDate=null;
+      if(!pending){
+        if(wasPending) paidDate=todayISO();
+        else paidDate=(existing && existing.paid_date) ? existing.paid_date : interventionDate;
+      }
       const record={
-        date:$("date").value||todayISO(),
+        date:interventionDate,
         payment:$("payment").value,
+        payment_pending:pending,
+        paid_date:paidDate,
         client:$("client").value.trim(),
         service:safeNum($("service").value),
         product:safeNum($("product").value),
@@ -785,7 +839,7 @@
         refreshMonthOptions();
         $("monthSelect").value=record.date.slice(0,7);
         closeSheet();
-        render();
+        render(); renderAnnual();
       }catch(err){
         console.error(err);
         alert("Enregistrement impossible dans Supabase. Vérifie les autorisations de la table.");
