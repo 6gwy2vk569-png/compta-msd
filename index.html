@@ -109,6 +109,24 @@
     .service-type-check input{accent-color:var(--blue)}
     .service-type-badge{display:inline-flex;align-items:center;background:#eef6ff;color:var(--blue);border:1px solid #b8d7ff;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
     .date-rule-note{font-size:12px;color:var(--muted);margin-top:-2px;padding:0 2px 4px}
+    .amount-section{grid-column:1/-1;display:grid;gap:10px;margin-top:2px}
+    .amount-title{font-size:14px;font-weight:900;color:var(--text);margin:2px 0 0}
+    .amount-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 14px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 14px rgba(15,23,42,.04);cursor:text}
+    .amount-card:focus-within{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+    .amount-label{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .amount-label strong{font-size:15px;line-height:1.15}
+    .amount-label small{font-size:11px;color:var(--muted);line-height:1.2}
+    .amount-input-wrap{display:flex;align-items:center;gap:5px;flex:0 0 132px;background:var(--bg);border-radius:12px;padding:3px 10px}
+    .amount-input-wrap input{width:100%;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;text-align:right;font-size:22px!important;font-weight:900;padding:8px 0!important;color:var(--text)}
+    .amount-input-wrap input:focus{outline:none}
+    .currency{font-size:18px;font-weight:900;color:var(--muted)}
+    .cost-card{background:#fffaf5}
+    @media(max-width:480px){
+      .amount-card{padding:12px}
+      .amount-input-wrap{flex-basis:118px}
+      .amount-label strong{font-size:14px}
+      .amount-input-wrap input{font-size:21px!important}
+    }
     .pending-note{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
     .pending-badge{display:inline-flex;align-items:center;gap:5px;background:#fff1cf;color:#9a6100;border:1px solid #f0c36d;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
     .outstanding{margin:14px 0;background:#fff8e8;border:1px solid #f0c36d;border-radius:18px;padding:14px}
@@ -183,6 +201,7 @@
       <div class="urssaf-row urssaf-total"><span>CA total encaissé</span><span id="urssafTotal">0,00 €</span></div>
       <div class="hint">Les montants sont calculés à partir des encaissements enregistrés dans l'application.</div>
     </section>
+    <button class="fab" id="addBtn" type="button">＋ Ajouter une intervention</button>
 
     <section class="card section">
       <div class="section-title"><h2>Chiffre d'affaires</h2><small>par semaine</small></div>
@@ -203,7 +222,7 @@
       <input type="file" id="importFile" accept=".json,application/json" hidden>
       <div class="sync-state" id="syncState"><span class="badge-local">● Local</span> — Supabase sera branché ensuite</div>
     </section>
-    <button class="fab" id="addBtn" type="button">＋ Ajouter une intervention</button>
+    
     </div>
 
     <section id="yearPanel" class="annual-panel" hidden>
@@ -316,18 +335,41 @@
           </label>
           <div class="date-rule-note">✓ Sans « Paiement en attente », l’encaissement est automatiquement rattaché à la date de l’intervention.</div>
 
-          <div class="field">
-            <label for="service">Main-d'œuvre encaissée (€)</label>
-            <input id="service" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
-          </div>
-          <div class="field">
-            <label for="product">Produits vendus (€)</label>
-            <input id="product" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
-          </div>
+          <div class="amount-section">
+            <div class="amount-title">Montants</div>
 
-          <div class="field full">
-            <label for="cost">Coût d'achat des produits (€)</label>
-            <input id="cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+            <label class="amount-card" for="service">
+              <span class="amount-label">
+                <strong>Main-d'œuvre</strong>
+                <small>Montant facturé au client</small>
+              </span>
+              <span class="amount-input-wrap">
+                <input id="service" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                <span class="currency">€</span>
+              </span>
+            </label>
+
+            <label class="amount-card" for="product">
+              <span class="amount-label">
+                <strong>Produits vendus</strong>
+                <small>Montant facturé au client</small>
+              </span>
+              <span class="amount-input-wrap">
+                <input id="product" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                <span class="currency">€</span>
+              </span>
+            </label>
+
+            <label class="amount-card cost-card" for="cost">
+              <span class="amount-label">
+                <strong>Coût d'achat</strong>
+                <small>Ce que le produit t'a coûté</small>
+              </span>
+              <span class="amount-input-wrap">
+                <input id="cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                <span class="currency">€</span>
+              </span>
+            </label>
           </div>
 
           <div class="calcbox">
