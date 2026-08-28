@@ -187,7 +187,8 @@
     <section class="cards">
       <div class="card metric blue"><div class="label">CA encaissé</div><div class="value" id="caTotal" class="ca-highlight">0,00 €</div></div>
       <div class="card metric green"><div class="label">Marge produits</div><div class="value" id="marginTotal">0,00 €</div></div>
-      <div class="card metric purple"><div class="label">Prestations</div><div class="value" id="serviceTotal">0,00 €</div></div>
+      <div class="card metric purple"><div class="label">Prestations artisanales</div><div class="value" id="serviceTotal">0,00 €</div></div>
+      <div class="card metric blue"><div class="label">Prestations de services</div><div class="value" id="specialServiceTotal">0,00 €</div></div>
       <div class="card metric orange"><div class="label">Ventes produits</div><div class="value" id="productTotal">0,00 €</div></div>
     </section>
 
@@ -196,7 +197,8 @@
         <h2>Déclaration URSSAF</h2>
         <small id="urssafMonth"></small>
       </div>
-      <div class="urssaf-row"><span>Prestations de services</span><strong id="urssafService">0,00 €</strong></div>
+      <div class="urssaf-row"><span>Prestations artisanales</span><strong id="urssafService">0,00 €</strong></div>
+      <div class="urssaf-row"><span>Prestations de services</span><strong id="urssafSpecialService">0,00 €</strong></div>
       <div class="urssaf-row"><span>Ventes de marchandises</span><strong id="urssafProduct">0,00 €</strong></div>
       <div class="urssaf-row urssaf-total"><span>CA total encaissé</span><span id="urssafTotal">0,00 €</span></div>
       <div class="hint">Les montants sont calculés à partir des encaissements enregistrés dans l'application.</div>
@@ -245,8 +247,12 @@
             <div class="value" id="annualMargin">0,00 €</div>
           </div>
           <div class="card metric purple">
-            <div class="label">Prestations</div>
+            <div class="label">Prestations artisanales</div>
             <div class="value" id="annualServices">0,00 €</div>
+          </div>
+          <div class="card metric blue">
+            <div class="label">Prestations de services</div>
+            <div class="value" id="annualSpecialServices">0,00 €</div>
           </div>
           <div class="card metric orange">
             <div class="label">Ventes produits</div>
@@ -267,7 +273,8 @@
             <thead>
               <tr>
                 <th>Mois</th>
-                <th>Prestations</th>
+                <th>Prest. artisanales</th>
+                <th>Prest. services</th>
                 <th>Ventes</th>
                 <th>CA</th>
                 <th>Coût produits</th>
@@ -279,6 +286,7 @@
               <tr>
                 <td>Total</td>
                 <td id="annualFootServices">0,00 €</td>
+                <td id="annualFootSpecialServices">0,00 €</td>
                 <td id="annualFootProducts">0,00 €</td>
                 <td id="annualFootCA" class="ca-cell">0,00 €</td>
                 <td id="annualFootCost">0,00 €</td>
@@ -330,7 +338,7 @@
           <label class="pending-check service-type-check">
             <input id="serviceType" type="checkbox">
             <span>Prestation de services
-              <span class="pending-note">Facultatif — si non coché, l’intervention reste comme actuellement.</span>
+              <span class="pending-note">À cocher uniquement pour classer cette prestation séparément. Sinon elle reste dans « Prestations artisanales ».</span>
             </span>
           </label>
           <div class="date-rule-note">✓ Sans « Paiement en attente », l’encaissement est automatiquement rattaché à la date de l’intervention.</div>
@@ -594,9 +602,11 @@
       if(!(await ensureAuth())) throw new Error("Session expirée");
       const r = await fetch(`${SUPABASE_URL}/rest/v1/interventions?id=eq.${encodeURIComponent(id)}`, {
         method:"DELETE",
-        headers:apiHeaders()
+        headers:apiHeaders({"Prefer":"return=representation"})
       });
       if(!r.ok) throw new Error(await r.text());
+      const rows=await r.json();
+      if(!Array.isArray(rows) || rows.length===0) throw new Error("Aucune intervention supprimée");
     }
 
     function refreshMonthOptions(){
@@ -734,9 +744,16 @@
       const list=selectedEntries();
       const monthKey=$("monthSelect").value;
       const paidList=entries.filter(e=>!e.payment_pending && String(e.paid_date||e.date||"").slice(0,7)===monthKey);
-      let service=0,product=0,cost=0;
-      paidList.forEach(e=>{service+=safeNum(e.service);product+=safeNum(e.product);cost+=safeNum(e.cost);});
-      const ca=service+product, margin=product-cost;
+      let service=0,specialService=0,product=0,cost=0;
+      paidList.forEach(e=>{
+        const amount=safeNum(e.service);
+        if(e.service_type) specialService+=amount;
+        else service+=amount;
+        product+=safeNum(e.product);
+        cost+=safeNum(e.cost);
+      });
+      const totalServices=service+specialService;
+      const ca=totalServices+product, margin=product-cost;
 
       const pending=entries.filter(e=>e.payment_pending);
       const pendingTotal=pending.reduce((s,e)=>s+safeNum(e.service)+safeNum(e.product),0);
@@ -749,9 +766,11 @@
 
       $("caTotal").textContent=euro(ca);
       $("serviceTotal").textContent=euro(service);
+      $("specialServiceTotal").textContent=euro(specialService);
       $("productTotal").textContent=euro(product);
       $("marginTotal").textContent=euro(margin);
       $("urssafService").textContent=euro(service);
+      $("urssafSpecialService").textContent=euro(specialService);
       $("urssafProduct").textContent=euro(product);
       $("urssafTotal").textContent=euro(ca);
       $("urssafMonth").textContent=monthLabel($("monthSelect").value);
@@ -785,9 +804,18 @@
         </article>`;
       }).join("");
 
-      document.querySelectorAll(".edit").forEach(b=>b.addEventListener("click",()=>openEdit(b.dataset.id)));
-      document.querySelectorAll(".delete").forEach(b=>b.addEventListener("click",()=>removeEntry(b.dataset.id)));
+      // Les actions sont gérées par délégation sur #entries (plus fiable après chaque rafraîchissement).
     }
+
+    $("entries").addEventListener("click", e=>{
+      const btn=e.target.closest("button[data-id]");
+      if(!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const id=btn.dataset.id;
+      if(btn.classList.contains("edit")) openEdit(id);
+      if(btn.classList.contains("delete")) removeEntry(id);
+    });
 
     function escapeHtml(v=""){
       return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
