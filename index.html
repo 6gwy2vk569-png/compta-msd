@@ -887,11 +887,19 @@
       const pending=$("paymentPending").checked;
       const wasPending=$("paymentPending").dataset.wasPending==="true";
       const existing=editingId ? entries.find(x=>String(x.id)===String(editingId)) : null;
-      const interventionDate=$("date").value||todayISO();
+      let interventionDate=$("date").value||todayISO();
       let paidDate=null;
       if(!pending){
-        if(wasPending) paidDate=todayISO();
-        else paidDate=interventionDate;
+        // Si une intervention était en attente et qu'on la valide comme payée,
+        // elle bascule automatiquement sur le mois courant.
+        // Une modification ultérieure reste possible avec le bouton crayon :
+        // la date choisie manuellement sera alors conservée.
+        if(wasPending){
+          interventionDate=todayISO();
+          paidDate=todayISO();
+        }else{
+          paidDate=interventionDate;
+        }
       }
       const record={
         date:interventionDate,
