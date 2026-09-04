@@ -623,9 +623,17 @@
       $("monthSelect").value=keys.includes(current)?current:currentMonthKey();
     }
 
+    function accountingDate(e){
+      // Une intervention en attente reste classée au mois de sa date d'intervention.
+      // Dès qu'elle est encaissée, elle est classée au mois de son encaissement (paid_date).
+      return e.payment_pending ? String(e.date||"") : String(e.paid_date||e.date||"");
+    }
+
     function selectedEntries(){
       const month=$("monthSelect").value;
-      return entries.filter(e=>String(e.date).slice(0,7)===month).sort((a,b)=>b.date.localeCompare(a.date));
+      return entries
+        .filter(e=>accountingDate(e).slice(0,7)===month)
+        .sort((a,b)=>accountingDate(b).localeCompare(accountingDate(a)));
     }
 
     function weekOfMonth(dateStr){
@@ -636,7 +644,7 @@
     function renderChart(list){
       const weekly=[0,0,0,0,0];
       list.forEach(e=>{
-        const w=weekOfMonth(e.date)-1;
+        const w=weekOfMonth(accountingDate(e))-1;
         weekly[w]+=safeNum(e.service)+safeNum(e.product);
       });
       const max=Math.max(...weekly,1);
@@ -790,7 +798,7 @@
           <div class="entry-top">
             <div>
               <div class="entry-name">${escapeHtml(e.client)}</div>
-              <div class="entry-meta">${formatDate(e.date)} · ${escapeHtml(e.payment||"")} ${e.payment_pending?'<span class="pending-badge">⏳ En attente</span>':""} ${e.service_type?'<span class="service-type-badge">Prestation de services</span>':""}</div>
+              <div class="entry-meta">${formatDate(accountingDate(e))}${!e.payment_pending && e.paid_date && e.date && e.paid_date!==e.date ? ` · intervention du ${formatDate(e.date)}` : ""} · ${escapeHtml(e.payment||"")} ${e.payment_pending?'<span class="pending-badge">⏳ En attente</span>':""} ${e.service_type?'<span class="service-type-badge">Prestation de services</span>':""}</div>
             </div>
             <div class="entry-total">${euro(safeNum(e.service)+safeNum(e.product))}</div>
           </div>
@@ -931,7 +939,7 @@
         }
         saveLocal();
         refreshMonthOptions();
-        $("monthSelect").value=record.date.slice(0,7);
+        $("monthSelect").value=accountingDate(record).slice(0,7);
         closeSheet();
         render(); renderAnnual();
       }catch(err){
