@@ -496,7 +496,7 @@
         saveAuth(data);
         return true;
       }catch(e){
-        saveAuth(null);
+        console.warn("Refresh Supabase temporairement impossible", e);
         return false;
       }
     }
