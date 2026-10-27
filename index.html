@@ -673,69 +673,72 @@
 
     function annualRows(year){
       const months=Array.from({length:12},(_,i)=>({
-        month:i+1, service:0, product:0, cost:0, count:0
+        month:i+1, service:0, specialService:0, product:0, cost:0, count:0
       }));
-      entries.filter(e=>!e.payment_pending && String(e.paid_date||e.date||"").startsWith(year+"-")).forEach(e=>{
-        const accountingDate=String(e.paid_date||e.date);
-        const m=Math.max(1,Math.min(12,Number(accountingDate.slice(5,7))))-1;
-        months[m].service+=safeNum(e.service);
-        months[m].product+=safeNum(e.product);
-        months[m].cost+=safeNum(e.cost);
-        months[m].count+=1;
-      });
+      entries.filter(e=>!e.payment_pending && String(e.paid_date||e.date||"").startsWith(year+"-"))
+        .forEach(e=>{
+          const date=String(e.paid_date||e.date||"");
+          const m=Number(date.slice(5,7))-1;
+          if(!Number.isInteger(m)||m<0||m>11) return;
+          if(e.service_type) months[m].specialService+=safeNum(e.service);
+          else months[m].service+=safeNum(e.service);
+          months[m].product+=safeNum(e.product);
+          months[m].cost+=safeNum(e.cost);
+          months[m].count++;
+        });
       return months;
     }
 
     function renderAnnual(){
-      if(!$("yearSelect")) return;
+      if(!$('yearSelect')) return;
       refreshYearOptions();
-      const year=$("yearSelect").value;
+      const year=$('yearSelect').value;
       const rows=annualRows(year);
-      const names=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+      const names=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
       const total=rows.reduce((a,r)=>({
         service:a.service+r.service,
+        specialService:a.specialService+r.specialService,
         product:a.product+r.product,
         cost:a.cost+r.cost,
         count:a.count+r.count
-      }),{service:0,product:0,cost:0,count:0});
-      const ca=total.service+total.product;
+      }),{service:0,specialService:0,product:0,cost:0,count:0});
+      const ca=total.service+total.specialService+total.product;
       const margin=total.product-total.cost;
-
-      $("annualCA").textContent=euro(ca);
-      $("annualServices").textContent=euro(total.service);
-      $("annualProducts").textContent=euro(total.product);
-      $("annualMargin").textContent=euro(margin);
-      $("annualCount").textContent=`${total.count} ${total.count>1?"interventions":"intervention"}`;
-
-      $("annualFootServices").textContent=euro(total.service);
-      $("annualFootProducts").textContent=euro(total.product);
-      $("annualFootCA").textContent=euro(ca);
-      $("annualFootCost").textContent=euro(total.cost);
-      $("annualFootMargin").textContent=euro(margin);
-
-      $("annualTableBody").innerHTML=rows.map((r,i)=>{
-        const mca=r.service+r.product;
+      $('annualCA').textContent=euro(ca);
+      $('annualServices').textContent=euro(total.service);
+      $('annualSpecialServices').textContent=euro(total.specialService);
+      $('annualProducts').textContent=euro(total.product);
+      $('annualMargin').textContent=euro(margin);
+      $('annualCount').textContent=`${total.count} ${total.count>1?'interventions':'intervention'}`;
+      $('annualFootServices').textContent=euro(total.service);
+      $('annualFootSpecialServices').textContent=euro(total.specialService);
+      $('annualFootProducts').textContent=euro(total.product);
+      $('annualFootCA').textContent=euro(ca);
+      $('annualFootCost').textContent=euro(total.cost);
+      $('annualFootMargin').textContent=euro(margin);
+      $('annualTableBody').innerHTML=rows.map((r,i)=>{
+        const mca=r.service+r.specialService+r.product;
         const mmargin=r.product-r.cost;
         return `<tr>
           <td>${names[i]}</td>
           <td>${euro(r.service)}</td>
+          <td>${euro(r.specialService)}</td>
           <td>${euro(r.product)}</td>
           <td class="ca-cell">${euro(mca)}</td>
           <td>${euro(r.cost)}</td>
           <td>${euro(mmargin)}</td>
         </tr>`;
-      }).join("");
-
-      const cas=rows.map(r=>r.service+r.product);
+      }).join('');
+      const cas=rows.map(r=>r.service+r.specialService+r.product);
       const max=Math.max(...cas,1);
-      $("annualChart").innerHTML=cas.map((v,i)=>{
+      $('annualChart').innerHTML=cas.map((v,i)=>{
         const h=v===0?4:Math.max(8,Math.round(v/max*160));
         return `<div class="annual-barcol">
-          <div class="barvalue">${v?euro(v):""}</div>
+          <div class="barvalue">${v?euro(v):''}</div>
           <div class="annual-bar" style="height:${h}px;opacity:${v?1:.18}"></div>
           <div class="barlabel">${names[i].slice(0,3)}</div>
         </div>`;
-      }).join("");
+      }).join('');
     }
 
     function setView(view){
