@@ -96,6 +96,25 @@
     .annual-table th{color:var(--muted);font-size:12px}
     .annual-table .ca-cell{font-weight:900;color:var(--blue)}
     .annual-table tfoot td{font-weight:900;border-top:2px solid var(--border);border-bottom:0}
+    .metric.supernet{background:linear-gradient(145deg,#f0fdf4,#bbf7d0);border-color:#86efac;cursor:pointer;text-align:left;width:100%;color:#14532d}
+    .metric.supernet .label{color:#166534;font-weight:800}
+    .metric.supernet .value{color:#166534}
+    .super-detail{margin-top:12px;border:1px solid #a7f3d0;background:#f0fdf4;border-radius:18px;padding:14px}
+    .super-detail[hidden]{display:none!important}
+    .super-detail h3{margin:0 0 8px;font-size:16px;color:#166534}
+    .super-detail .row{font-size:13px}
+    .super-detail .row strong{text-align:right}
+    .super-detail .net-final{font-weight:900;color:#15803d}
+    .settings-button{width:100%;border:1px solid var(--border);border-radius:14px;background:white;padding:14px;font-weight:800;margin-top:14px}
+    .rates-grid{display:grid;grid-template-columns:1fr;gap:8px}
+    .rate-help{font-size:12px;color:var(--muted);line-height:1.5}
+    .annual-chart-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0}
+    .legend-dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px}
+    .annual-bars{height:175px;display:flex;gap:3px;align-items:flex-end;justify-content:center;width:100%}
+    .annual-bars .annual-bar{width:42%;min-height:2px}
+    .annual-bar.net{background:linear-gradient(180deg,#16a34a,#86efac)}
+    .annual-table{min-width:1020px}
+    .annual-table .net-cell{color:#15803d;font-weight:900}
     .year-select{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;color:var(--text);font-weight:700}
     .auth-screen{max-width:460px;margin:60px auto 0;padding:0 14px}
     .auth-card{background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:var(--shadow)}
@@ -190,6 +209,17 @@
       <div class="card metric purple"><div class="label">Prestations artisanales</div><div class="value" id="serviceTotal">0,00 €</div></div>
       <div class="card metric blue"><div class="label">Prestations de services</div><div class="value" id="specialServiceTotal">0,00 €</div></div>
       <div class="card metric orange"><div class="label">Ventes produits</div><div class="value" id="productTotal">0,00 €</div></div>
+      <button class="card metric supernet" id="superNetToggle" type="button" aria-expanded="false" aria-controls="superNetDetail"><div class="label">💰 Super net après URSSAF ▾</div><div class="value" id="superNetTotal">0,00 €</div></button>
+    </section>
+    <section class="super-detail" id="superNetDetail" hidden>
+      <h3>Détail du Super net</h3>
+      <div class="row"><span>Prestations artisanales + BNC + marge produits</span><strong id="grossResult">0,00 €</strong></div>
+      <div class="row"><span id="detailArtisanLabel">Cotisations artisanales (21,2 %)</span><strong id="detailArtisan">0,00 €</strong></div>
+      <div class="row"><span id="detailBncLabel">Cotisations BNC (25,6 %)</span><strong id="detailBnc">0,00 €</strong></div>
+      <div class="row"><span id="detailSalesLabel">Cotisations ventes (12,3 %)</span><strong id="detailSales">0,00 €</strong></div>
+      <div class="row"><span>Total cotisations estimées</span><strong id="detailContributions">0,00 €</strong></div>
+      <div class="row net-final"><span>Super net estimé</span><strong id="detailNet">0,00 €</strong></div>
+      <div class="hint">Estimation après cotisations sociales uniquement. Hors CFP, taxes consulaires, impôt sur le revenu et autres frais.</div>
     </section>
 
     <section class="card section">
@@ -224,7 +254,7 @@
       <input type="file" id="importFile" accept=".json,application/json" hidden>
       <div class="sync-state" id="syncState"><span class="badge-local">● Local</span> — Supabase sera branché ensuite</div>
     </section>
-    
+    <button class="settings-button" id="urssafSettingsBtn" type="button">⚙️ Réglages URSSAF</button>
     </div>
 
     <section id="yearPanel" class="annual-panel" hidden>
@@ -258,11 +288,15 @@
             <div class="label">Ventes produits</div>
             <div class="value" id="annualProducts">0,00 €</div>
           </div>
+          <div class="card metric green"><div class="label">Résultat avant URSSAF</div><div class="value" id="annualGross">0,00 €</div></div>
+          <div class="card metric purple"><div class="label">Cotisations URSSAF estimées</div><div class="value" id="annualContributions">0,00 €</div></div>
+          <div class="card metric supernet"><div class="label">💰 Super net annuel</div><div class="value" id="annualNet">0,00 €</div></div>
         </div>
       </div>
 
       <div class="card section">
-        <div class="section-title"><h2>Évolution du CA</h2><small>par mois</small></div>
+        <div class="section-title"><h2>Évolution du CA et du Super net</h2><small>par mois</small></div>
+        <div class="annual-chart-legend"><span><i class="legend-dot" style="background:#2563eb"></i>CA</span><span><i class="legend-dot" style="background:#16a34a"></i>Super net estimé</span></div>
         <div id="annualChart" class="annual-chart"></div>
       </div>
 
@@ -279,6 +313,9 @@
                 <th>CA</th>
                 <th>Coût produits</th>
                 <th>Marge</th>
+                <th>Résultat avant URSSAF</th>
+                <th>Cotisations</th>
+                <th>Super net</th>
               </tr>
             </thead>
             <tbody id="annualTableBody"></tbody>
@@ -291,6 +328,9 @@
                 <td id="annualFootCA" class="ca-cell">0,00 €</td>
                 <td id="annualFootCost">0,00 €</td>
                 <td id="annualFootMargin">0,00 €</td>
+                <td id="annualFootGross">0,00 €</td>
+                <td id="annualFootContributions">0,00 €</td>
+                <td id="annualFootNet" class="net-cell">0,00 €</td>
               </tr>
             </tfoot>
           </table>
@@ -393,6 +433,19 @@
     </div>
   </div>
 
+  <div class="overlay" id="settingsOverlay" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="sheet">
+      <div class="sheet-head"><h3 id="settingsTitle">⚙️ Réglages URSSAF</h3><button class="close" id="closeSettingsBtn" type="button" aria-label="Fermer">×</button></div>
+      <form id="ratesForm" class="rates-grid">
+        <div class="field"><label for="rateArtisan">Prestations artisanales BIC (%)</label><input id="rateArtisan" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <div class="field"><label for="rateBnc">Prestations BNC – éducateur sportif (%)</label><input id="rateBnc" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <div class="field"><label for="rateSales">Ventes de marchandises (%)</label><input id="rateSales" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <p class="rate-help">Taux par défaut : BIC 21,2 %, BNC hors Cipav 25,6 %, ventes 12,3 %. Vérifie ton affiliation et les taux affichés sur ton espace URSSAF. Réglages mémorisés sur cet appareil uniquement.</p>
+        <button class="save" type="submit">Enregistrer les taux</button>
+      </form>
+    </div>
+  </div>
+
   <script>
   (() => {
     "use strict";
@@ -404,6 +457,32 @@
     // ===============================
 
     const STORAGE_KEY = "compta_msd_v1";
+    const RATES_KEY = "compta_msd_urssaf_rates_v1";
+    const DEFAULT_RATES = Object.freeze({artisan:21.2,bnc:25.6,sales:12.3});
+    function loadRates(){
+      try{
+        const saved=JSON.parse(localStorage.getItem(RATES_KEY)||"{}");
+        const result={...DEFAULT_RATES};
+        for(const key of Object.keys(result)){
+          const n=Number(saved[key]);
+          if(saved[key]!==undefined && Number.isFinite(n) && n>=0 && n<=100) result[key]=n;
+        }
+        return result;
+      }catch(e){return {...DEFAULT_RATES};}
+    }
+    let rates=loadRates();
+    function financials(service,specialService,product,cost){
+      const ca=service+specialService+product;
+      const margin=product-cost;
+      const gross=service+specialService+margin;
+      const artisanDue=service*rates.artisan/100;
+      const bncDue=specialService*rates.bnc/100;
+      const salesDue=product*rates.sales/100;
+      const contributions=artisanDue+bncDue+salesDue;
+      return {ca,margin,gross,artisanDue,bncDue,salesDue,contributions,net:gross-contributions};
+    }
+    function percent(n){return new Intl.NumberFormat("fr-FR",{maximumFractionDigits:2}).format(n)+" %";}
+
     const euro = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(Number(n)||0);
     const root = document;
     const $ = id => root.getElementById(id);
@@ -702,13 +781,15 @@
         cost:a.cost+r.cost,
         count:a.count+r.count
       }),{service:0,specialService:0,product:0,cost:0,count:0});
-      const ca=total.service+total.specialService+total.product;
-      const margin=total.product-total.cost;
+      const {ca,margin,gross,contributions,net}=financials(total.service,total.specialService,total.product,total.cost);
       $('annualCA').textContent=euro(ca);
       $('annualServices').textContent=euro(total.service);
       $('annualSpecialServices').textContent=euro(total.specialService);
       $('annualProducts').textContent=euro(total.product);
       $('annualMargin').textContent=euro(margin);
+      $('annualGross').textContent=euro(gross);
+      $('annualContributions').textContent=euro(contributions);
+      $('annualNet').textContent=euro(net);
       $('annualCount').textContent=`${total.count} ${total.count>1?'interventions':'intervention'}`;
       $('annualFootServices').textContent=euro(total.service);
       $('annualFootSpecialServices').textContent=euro(total.specialService);
@@ -716,9 +797,13 @@
       $('annualFootCA').textContent=euro(ca);
       $('annualFootCost').textContent=euro(total.cost);
       $('annualFootMargin').textContent=euro(margin);
+      $('annualFootGross').textContent=euro(gross);
+      $('annualFootContributions').textContent=euro(contributions);
+      $('annualFootNet').textContent=euro(net);
       $('annualTableBody').innerHTML=rows.map((r,i)=>{
         const mca=r.service+r.specialService+r.product;
-        const mmargin=r.product-r.cost;
+        const mf=financials(r.service,r.specialService,r.product,r.cost);
+        const mmargin=mf.margin;
         return `<tr>
           <td>${names[i]}</td>
           <td>${euro(r.service)}</td>
@@ -727,15 +812,20 @@
           <td class="ca-cell">${euro(mca)}</td>
           <td>${euro(r.cost)}</td>
           <td>${euro(mmargin)}</td>
+          <td>${euro(mf.gross)}</td>
+          <td>${euro(mf.contributions)}</td>
+          <td class="net-cell">${euro(mf.net)}</td>
         </tr>`;
       }).join('');
       const cas=rows.map(r=>r.service+r.specialService+r.product);
-      const max=Math.max(...cas,1);
+      const nets=rows.map(r=>financials(r.service,r.specialService,r.product,r.cost).net);
+      const max=Math.max(...cas,...nets.map(Math.abs),1);
       $('annualChart').innerHTML=cas.map((v,i)=>{
-        const h=v===0?4:Math.max(8,Math.round(v/max*160));
-        return `<div class="annual-barcol">
-          <div class="barvalue">${v?euro(v):''}</div>
-          <div class="annual-bar" style="height:${h}px;opacity:${v?1:.18}"></div>
+        const n=nets[i];
+        const h=v===0?3:Math.max(6,Math.round(v/max*155));
+        const hn=n<=0?3:Math.max(6,Math.round(n/max*155));
+        return `<div class="annual-barcol" title="${names[i]} : CA ${euro(v)}, Super net ${euro(n)}">
+          <div class="annual-bars"><div class="annual-bar" style="height:${h}px;opacity:${v?1:.18}"></div><div class="annual-bar net" style="height:${hn}px;opacity:${n>0?1:.18}"></div></div>
           <div class="barlabel">${names[i].slice(0,3)}</div>
         </div>`;
       }).join('');
@@ -764,7 +854,7 @@
         cost+=safeNum(e.cost);
       });
       const totalServices=service+specialService;
-      const ca=totalServices+product, margin=product-cost;
+      const {ca,margin,gross,artisanDue,bncDue,salesDue,contributions,net}=financials(service,specialService,product,cost);
 
       const pending=entries.filter(e=>e.payment_pending);
       const pendingTotal=pending.reduce((s,e)=>s+safeNum(e.service)+safeNum(e.product),0);
@@ -780,6 +870,16 @@
       $("specialServiceTotal").textContent=euro(specialService);
       $("productTotal").textContent=euro(product);
       $("marginTotal").textContent=euro(margin);
+      $("superNetTotal").textContent=euro(net);
+      $("grossResult").textContent=euro(gross);
+      $("detailArtisanLabel").textContent=`Cotisations artisanales (${percent(rates.artisan)})`;
+      $("detailBncLabel").textContent=`Cotisations BNC (${percent(rates.bnc)})`;
+      $("detailSalesLabel").textContent=`Cotisations ventes (${percent(rates.sales)})`;
+      $("detailArtisan").textContent=euro(-artisanDue);
+      $("detailBnc").textContent=euro(-bncDue);
+      $("detailSales").textContent=euro(-salesDue);
+      $("detailContributions").textContent=euro(-contributions);
+      $("detailNet").textContent=euro(net);
       $("urssafService").textContent=euro(service);
       $("urssafSpecialService").textContent=euro(specialService);
       $("urssafProduct").textContent=euro(product);
@@ -962,6 +1062,31 @@
     $("monthViewBtn").addEventListener("click",()=>setView("month"));
     $("yearViewBtn").addEventListener("click",()=>setView("year"));
     $("yearSelect").addEventListener("change",renderAnnual);
+    $("superNetToggle").addEventListener("click",()=>{
+      const detail=$("superNetDetail");
+      detail.hidden=!detail.hidden;
+      $("superNetToggle").setAttribute("aria-expanded",String(!detail.hidden));
+    });
+    function closeSettings(){ $("settingsOverlay").classList.remove("open"); }
+    $("urssafSettingsBtn").addEventListener("click",()=>{
+      $("rateArtisan").value=rates.artisan;
+      $("rateBnc").value=rates.bnc;
+      $("rateSales").value=rates.sales;
+      $("settingsOverlay").classList.add("open");
+    });
+    $("closeSettingsBtn").addEventListener("click",closeSettings);
+    $("settingsOverlay").addEventListener("click",e=>{if(e.target===$("settingsOverlay"))closeSettings();});
+    $("ratesForm").addEventListener("submit",e=>{
+      e.preventDefault();
+      const next={artisan:Number($("rateArtisan").value),bnc:Number($("rateBnc").value),sales:Number($("rateSales").value)};
+      if(Object.values(next).some(n=>!Number.isFinite(n)||n<0||n>100)){
+        alert("Indique des taux compris entre 0 et 100 %.");return;
+      }
+      rates=next;
+      localStorage.setItem(RATES_KEY,JSON.stringify(rates));
+      closeSettings();
+      render();renderAnnual();
+    });
 
     $("loginForm").addEventListener("submit",async e=>{
       e.preventDefault();
