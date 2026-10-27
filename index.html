@@ -217,9 +217,14 @@
       <div class="row"><span id="detailArtisanLabel">Cotisations artisanales (21,2 %)</span><strong id="detailArtisan">0,00 €</strong></div>
       <div class="row"><span id="detailBncLabel">Cotisations BNC (25,6 %)</span><strong id="detailBnc">0,00 €</strong></div>
       <div class="row"><span id="detailSalesLabel">Cotisations ventes (12,3 %)</span><strong id="detailSales">0,00 €</strong></div>
-      <div class="row"><span>Total cotisations estimées</span><strong id="detailContributions">0,00 €</strong></div>
+      <div class="row"><span>Total cotisations sociales</span><strong id="detailSocial">0,00 €</strong></div>
+      <div class="row"><span id="detailTaxArtisanLabel">Versement libératoire BIC prestations (1,7 %)</span><strong id="detailTaxArtisan">0,00 €</strong></div>
+      <div class="row"><span id="detailTaxBncLabel">Versement libératoire BNC (2,2 %)</span><strong id="detailTaxBnc">0,00 €</strong></div>
+      <div class="row"><span id="detailTaxSalesLabel">Versement libératoire ventes (1 %)</span><strong id="detailTaxSales">0,00 €</strong></div>
+      <div class="row"><span id="detailCfpLabel">Contribution formation professionnelle (0,2 %)</span><strong id="detailCfp">0,00 €</strong></div>
+      <div class="row"><span>Total prélèvements URSSAF estimés</span><strong id="detailContributions">0,00 €</strong></div>
       <div class="row net-final"><span>Super net estimé</span><strong id="detailNet">0,00 €</strong></div>
-      <div class="hint">Estimation après cotisations sociales uniquement. Hors CFP, taxes consulaires, impôt sur le revenu et autres frais.</div>
+      <div class="hint">Estimation après cotisations sociales, versement libératoire et CFP, selon les taux enregistrés. Hors autres frais, taxes éventuelles et régularisations. Le montant réellement appelé par l’URSSAF peut différer (arrondis).</div>
     </section>
 
     <section class="card section">
@@ -289,7 +294,7 @@
             <div class="value" id="annualProducts">0,00 €</div>
           </div>
           <div class="card metric green"><div class="label">Résultat avant URSSAF</div><div class="value" id="annualGross">0,00 €</div></div>
-          <div class="card metric purple"><div class="label">Cotisations URSSAF estimées</div><div class="value" id="annualContributions">0,00 €</div></div>
+          <div class="card metric purple"><div class="label">Prélèvements URSSAF estimés</div><div class="value" id="annualContributions">0,00 €</div></div>
           <div class="card metric supernet"><div class="label">💰 Super net annuel</div><div class="value" id="annualNet">0,00 €</div></div>
         </div>
       </div>
@@ -440,7 +445,11 @@
         <div class="field"><label for="rateArtisan">Prestations artisanales BIC (%)</label><input id="rateArtisan" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
         <div class="field"><label for="rateBnc">Prestations BNC – éducateur sportif (%)</label><input id="rateBnc" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
         <div class="field"><label for="rateSales">Ventes de marchandises (%)</label><input id="rateSales" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
-        <p class="rate-help">Taux par défaut : BIC 21,2 %, BNC hors Cipav 25,6 %, ventes 12,3 %. Vérifie ton affiliation et les taux affichés sur ton espace URSSAF. Réglages mémorisés sur cet appareil uniquement.</p>
+        <div class="field"><label for="rateTaxArtisan">Versement libératoire BIC prestations (%)</label><input id="rateTaxArtisan" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <div class="field"><label for="rateTaxBnc">Versement libératoire BNC (%)</label><input id="rateTaxBnc" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <div class="field"><label for="rateTaxSales">Versement libératoire ventes (%)</label><input id="rateTaxSales" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <div class="field"><label for="rateCfp">Contribution à la formation professionnelle – CFP (%)</label><input id="rateCfp" type="number" min="0" max="100" step="0.01" inputmode="decimal" required></div>
+        <p class="rate-help">Taux initialement renseignés d’après ta déclaration URSSAF : cotisations BIC 21,2 %, BNC 25,6 %, ventes 12,3 % ; versement libératoire BIC 1,7 %, BNC 2,2 %, ventes 1 % ; CFP 0,2 % du CA encaissé. Chaque taux est modifiable. Réglages enregistrés sur cet appareil, pas dans Supabase. Les arrondis de déclaration peuvent différer.</p>
         <button class="save" type="submit">Enregistrer les taux</button>
       </form>
     </div>
@@ -458,7 +467,7 @@
 
     const STORAGE_KEY = "compta_msd_v1";
     const RATES_KEY = "compta_msd_urssaf_rates_v1";
-    const DEFAULT_RATES = Object.freeze({artisan:21.2,bnc:25.6,sales:12.3});
+    const DEFAULT_RATES = Object.freeze({artisan:21.2,bnc:25.6,sales:12.3,taxArtisan:1.7,taxBnc:2.2,taxSales:1,cfp:0.2});
     function loadRates(){
       try{
         const saved=JSON.parse(localStorage.getItem(RATES_KEY)||"{}");
@@ -478,8 +487,14 @@
       const artisanDue=service*rates.artisan/100;
       const bncDue=specialService*rates.bnc/100;
       const salesDue=product*rates.sales/100;
-      const contributions=artisanDue+bncDue+salesDue;
-      return {ca,margin,gross,artisanDue,bncDue,salesDue,contributions,net:gross-contributions};
+      const social=artisanDue+bncDue+salesDue;
+      const taxArtisanDue=service*rates.taxArtisan/100;
+      const taxBncDue=specialService*rates.taxBnc/100;
+      const taxSalesDue=product*rates.taxSales/100;
+      const tax=taxArtisanDue+taxBncDue+taxSalesDue;
+      const cfpDue=ca*rates.cfp/100;
+      const contributions=social+tax+cfpDue;
+      return {ca,margin,gross,artisanDue,bncDue,salesDue,social,taxArtisanDue,taxBncDue,taxSalesDue,tax,cfpDue,contributions,net:gross-contributions};
     }
     function percent(n){return new Intl.NumberFormat("fr-FR",{maximumFractionDigits:2}).format(n)+" %";}
 
@@ -854,7 +869,7 @@
         cost+=safeNum(e.cost);
       });
       const totalServices=service+specialService;
-      const {ca,margin,gross,artisanDue,bncDue,salesDue,contributions,net}=financials(service,specialService,product,cost);
+      const {ca,margin,gross,artisanDue,bncDue,salesDue,social,taxArtisanDue,taxBncDue,taxSalesDue,cfpDue,contributions,net}=financials(service,specialService,product,cost);
 
       const pending=entries.filter(e=>e.payment_pending);
       const pendingTotal=pending.reduce((s,e)=>s+safeNum(e.service)+safeNum(e.product),0);
@@ -878,6 +893,15 @@
       $("detailArtisan").textContent=euro(-artisanDue);
       $("detailBnc").textContent=euro(-bncDue);
       $("detailSales").textContent=euro(-salesDue);
+      $("detailSocial").textContent=euro(-social);
+      $("detailTaxArtisanLabel").textContent=`Versement libératoire BIC prestations (${percent(rates.taxArtisan)})`;
+      $("detailTaxBncLabel").textContent=`Versement libératoire BNC (${percent(rates.taxBnc)})`;
+      $("detailTaxSalesLabel").textContent=`Versement libératoire ventes (${percent(rates.taxSales)})`;
+      $("detailCfpLabel").textContent=`Contribution formation professionnelle (${percent(rates.cfp)})`;
+      $("detailTaxArtisan").textContent=euro(-taxArtisanDue);
+      $("detailTaxBnc").textContent=euro(-taxBncDue);
+      $("detailTaxSales").textContent=euro(-taxSalesDue);
+      $("detailCfp").textContent=euro(-cfpDue);
       $("detailContributions").textContent=euro(-contributions);
       $("detailNet").textContent=euro(net);
       $("urssafService").textContent=euro(service);
@@ -1072,13 +1096,17 @@
       $("rateArtisan").value=rates.artisan;
       $("rateBnc").value=rates.bnc;
       $("rateSales").value=rates.sales;
+      $("rateTaxArtisan").value=rates.taxArtisan;
+      $("rateTaxBnc").value=rates.taxBnc;
+      $("rateTaxSales").value=rates.taxSales;
+      $("rateCfp").value=rates.cfp;
       $("settingsOverlay").classList.add("open");
     });
     $("closeSettingsBtn").addEventListener("click",closeSettings);
     $("settingsOverlay").addEventListener("click",e=>{if(e.target===$("settingsOverlay"))closeSettings();});
     $("ratesForm").addEventListener("submit",e=>{
       e.preventDefault();
-      const next={artisan:Number($("rateArtisan").value),bnc:Number($("rateBnc").value),sales:Number($("rateSales").value)};
+      const next={artisan:Number($("rateArtisan").value),bnc:Number($("rateBnc").value),sales:Number($("rateSales").value),taxArtisan:Number($("rateTaxArtisan").value),taxBnc:Number($("rateTaxBnc").value),taxSales:Number($("rateTaxSales").value),cfp:Number($("rateCfp").value)};
       if(Object.values(next).some(n=>!Number.isFinite(n)||n<0||n>100)){
         alert("Indique des taux compris entre 0 et 100 %.");return;
       }
